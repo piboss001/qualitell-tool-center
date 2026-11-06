@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f8f5">
+  <title>图片批量处理中心 · Qualitell</title>
+  <meta name="description" content="Qualitell 图片批量处理工具，支持批量调整尺寸、格式转换、压缩、重命名和水印。本地处理，图片不上传。">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/image-batch.css">
+  <script src="/image-batch.js" defer></script>
+</head>
+<body class="batch-page">
+  <header class="batch-header">
+    <a class="brand" href="/" aria-label="返回 Qualitell 工具中心">QUALITELL<span>.</span></a>
+    <nav class="main-nav" aria-label="工具导航">
+      <a href="/">工具中心</a>
+      <a href="/stitcher">长图拼接</a>
+      <a href="/slice">长图切片</a>
+      <a href="/image-batch" class="active" aria-current="page">图片批处理</a>
+    </nav>
+    <span class="privacy-label"><span class="privacy-dot"></span>本地处理 · 图片不上传</span>
+  </header>
+
+  <main class="batch-container">
+    <section class="page-intro">
+      <div class="eyebrow">QUALITELL · IMAGE WORKSPACE</div>
+      <h1>图片批量处理中心</h1>
+      <p>一次导入多张图片，统一调整尺寸、转换格式、压缩文件、重命名和添加水印。所有处理都在当前浏览器完成。</p>
+    </section>
+
+    <div class="batch-layout">
+      <section class="workspace-panel panel">
+        <div class="panel-heading">
+          <div>
+            <h2>图片队列 <span class="count-pill" id="file-count">0</span></h2>
+            <p>支持 PNG、JPG、WebP、GIF、BMP、AVIF 等常见图片格式</p>
+          </div>
+          <button type="button" class="text-button" id="clear-files" disabled>清空队列</button>
+        </div>
+
+        <input id="file-input" type="file" accept="image/*" multiple hidden>
+        <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="选择或拖入图片">
+          <div class="drop-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none">
+              <path d="M24 31V9m0 0-8 8m8-8 8 8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 28v8a3 3 0 0 0 3 3h22a3 3 0 0 0 3-3v-8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <strong>拖放图片到这里</strong>
+          <span>也可以点击选择，多张图片可同时导入</span>
+          <button type="button" class="primary-button" id="choose-files">选择图片</button>
+          <small>建议单张图片不超过 50 MB；动画 GIF 将按首帧处理</small>
+        </div>
+
+        <div class="queue-toolbar">
+          <span id="queue-hint">尚未添加图片</span>
+          <span>处理顺序与导入顺序一致</span>
+        </div>
+        <div class="file-grid" id="file-grid">
+          <div class="empty-queue" id="empty-queue">
+            <span class="empty-symbol">▧</span>
+            <strong>图片队列还是空的</strong>
+            <span>添加图片后，可以在右侧统一设置处理规则</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="settings-panel panel">
+        <div class="panel-heading settings-heading">
+          <div>
+            <h2>批量处理设置</h2>
+            <p>以下设置将应用到队列中的全部图片</p>
+          </div>
+          <button type="button" class="text-button" id="reset-settings">恢复默认</button>
+        </div>
+
+        <section class="setting-section">
+          <div class="section-title"><span class="section-number">01</span><h3>尺寸调整</h3></div>
+          <label class="field-label" for="resize-mode">调整方式</label>
+          <select class="control" id="resize-mode">
+            <option value="original">保持原始尺寸</option>
+            <option value="width">统一宽度，等比缩放</option>
+            <option value="height">统一高度，等比缩放</option>
+            <option value="fit">适应画布，完整显示</option>
+            <option value="fill">填满画布，自动裁切</option>
+            <option value="stretch">拉伸至指定尺寸</option>
+          </select>
+          <div class="dimension-grid" id="dimension-grid">
+            <label class="field-label dimension-field" id="width-field">目标宽度（px）
+              <input class="control" id="target-width" type="number" min="1" max="12000" value="1200" inputmode="numeric">
+            </label>
+            <label class="field-label dimension-field" id="height-field">目标高度（px）
+              <input class="control" id="target-height" type="number" min="1" max="12000" value="1200" inputmode="numeric">
+            </label>
+          </div>
+          <p class="field-help" id="resize-help">保持每张图片原来的宽高，不进行缩放。</p>
+        </section>
+
+        <section class="setting-section">
+          <div class="section-title"><span class="section-number">02</span><h3>格式与压缩</h3></div>
+          <label class="field-label" for="output-format">导出格式</label>
+          <select class="control" id="output-format">
+            <option value="original">保持原格式（不支持的格式转 PNG）</option>
+            <option value="image/jpeg">JPG</option>
+            <option value="image/png">PNG</option>
+            <option value="image/webp">WebP</option>
+          </select>
+          <div class="quality-setting" id="quality-setting">
+            <div class="range-heading">
+              <label class="field-label" for="quality">图片质量</label>
+              <strong id="quality-value">90%</strong>
+            </div>
+            <input class="range-control" id="quality" type="range" min="40" max="100" value="90">
+            <p class="field-help">适用于 JPG / WebP；数值越低，文件通常越小。PNG 为无损格式。</p>
+          </div>
+          <div class="color-setting">
+            <label class="field-label" for="background-color">画布背景色</label>
+            <div class="color-control">
+              <input id="background-color" type="color" value="#ffffff" aria-label="画布背景色">
+              <span>用于 JPG 透明背景填充，以及适应画布时的留白区域</span>
+            </div>
+            <label class="check-line"><input id="transparent-background" type="checkbox" checked> PNG / WebP 适应画布时保留透明背景</label>
+          </div>
+        </section>
+
+        <section class="setting-section">
+          <div class="section-title"><span class="section-number">03</span><h3>批量命名</h3></div>
+          <label class="check-line numbering-line"><input id="add-number" type="checkbox"> 文件名前添加序号</label>
+          <div class="two-fields">
+            <label class="field-label" for="number-start">起始序号
+              <input class="control" id="number-start" type="number" min="1" max="99999" value="1">
+            </label>
+            <label class="field-label" for="number-digits">序号位数
+              <select class="control" id="number-digits">
+                <option value="1">1 位</option>
+                <option value="2" selected>2 位</option>
+                <option value="3">3 位</option>
+                <option value="4">4 位</option>
+              </select>
+            </label>
+          </div>
+          <div class="two-fields">
+            <label class="field-label" for="name-prefix">文件名前缀
+              <input class="control" id="name-prefix" type="text" maxlength="40" placeholder="例如：Qualitell_">
+            </label>
+            <label class="field-label" for="name-suffix">文件名后缀
+              <input class="control" id="name-suffix" type="text" maxlength="40" placeholder="例如：_1200px">
+            </label>
+          </div>
+        </section>
+
+        <section class="setting-section">
+          <div class="section-title"><span class="section-number">04</span><h3>文字水印 <span class="optional-tag">可选</span></h3></div>
+          <label class="field-label" for="watermark-text">水印内容</label>
+          <input class="control" id="watermark-text" type="text" maxlength="60" placeholder="输入需要添加的文字">
+          <div class="two-fields">
+            <label class="field-label" for="watermark-position">水印位置
+              <select class="control" id="watermark-position">
+                <option value="bottom-right">右下角</option>
+                <option value="bottom-left">左下角</option>
+                <option value="center">居中</option>
+                <option value="top-right">右上角</option>
+              </select>
+            </label>
+            <label class="field-label" for="watermark-color">水印颜色
+              <input class="control color-input" id="watermark-color" type="color" value="#ffffff">
+            </label>
+          </div>
+          <div class="range-heading">
+            <label class="field-label" for="watermark-opacity">水印不透明度</label>
+            <strong id="watermark-opacity-value">35%</strong>
+          </div>
+          <input class="range-control" id="watermark-opacity" type="range" min="5" max="100" value="35">
+        </section>
+
+        <div class="settings-note">
+          <svg viewBox="0 0 18 18" fill="none" aria-hidden="true"><rect x="3.2" y="7.2" width="11.6" height="8" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M5.7 7.2V5.4a3.3 3.3 0 0 1 6.6 0v1.8" stroke="currentColor" stroke-width="1.3"/></svg>
+          图片在本地浏览器处理，不会上传到 Qualitell 服务器。
+        </div>
+        <button type="button" class="primary-button process-button" id="process-button" disabled>开始批量处理</button>
+      </aside>
+    </div>
+
+    <section class="progress-panel panel" id="progress-panel" hidden>
+      <div class="progress-top">
+        <div><strong id="progress-title">正在处理图片</strong><span id="progress-text">0 / 0</span></div>
+        <strong id="progress-percent">0%</strong>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+      <p id="progress-message">请保持此页面打开，处理过程在浏览器本地进行。</p>
+    </section>
+
+    <section class="results-panel panel" id="results-panel" hidden>
+      <div class="results-heading">
+        <div>
+          <h2>处理结果</h2>
+          <p id="results-summary">已完成 0 张图片</p>
+        </div>
+        <button type="button" class="primary-button zip-button" id="download-zip" disabled>打包下载 ZIP</button>
+      </div>
+      <div class="results-list" id="results-list"></div>
+    </section>
+
+    <footer class="batch-footer">
+      <a href="/">← 返回工具中心</a>
+      <span>QUALITELL · IMAGE TOOLS</span>
+    </footer>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
