@@ -23,7 +23,7 @@ jobs:
           set +e
           BASE="https://tool.qualitell.com"
           mkdir -p /tmp/original
-          files=(app.js styles.css slice.css slice.html slice.js favicon.svg _headers index.html)
+          files=(app.js styles.css slice.css slice.html slice.js favicon.svg index.html)
           declare -A expected=(
             [app.js]="7d63bf2af41db459a0fc2c92f45a82470491ec64db80e36353c09013fab1ef8b"
             [styles.css]="7fd66fd8bb1534d94052a264cc3372a40155431d7f3f1980dc374446ec06706d"
@@ -31,7 +31,6 @@ jobs:
             [slice.html]="31ed239ed351425f7053f1a1b2e85b43d5c3ccc665ed860cdd7086ae349a2b27"
             [slice.js]="278726014d4bf246d4c66e1664f391741eade8ca896c5dfd1e036cf9f53d04bc"
             [favicon.svg]="6b83500222a076de19bdcd2a30862aaaf87bcfb6e993fcdd766ce416f9b9298c"
-            [_headers]="8607396d10abbb0daa9f1fefe163298151d4b1b8fd21896e94d79c97d6013a8d"
             [index.html]="ac90cdd1552fdf39246bb8bd753dc1bd0f9b5afd4df8365c424f865d59982733"
           )
           report="| File | HTTP | Download | SHA-256 check |\n|---|---:|---|---|\n"
@@ -73,7 +72,6 @@ jobs:
           cp /tmp/original/slice.js slice.js
           cp /tmp/original/slice.html slice.html
           cp /tmp/original/favicon.svg favicon.svg
-          cp /tmp/original/_headers _headers
           cp /tmp/original/index.html stitcher.html
 
           python3 - <<'PY'
