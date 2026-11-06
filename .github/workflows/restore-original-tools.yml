@@ -2,8 +2,7 @@ name: Restore original tools and add tool center homepage
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - ".github/workflows/restore-original-tools.yml"
 
@@ -17,36 +16,66 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Restore the exact original files and add the homepage
+      - name: Verify original source availability
+        id: verify
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
           BASE="https://tool.qualitell.com"
-
-          # Download the original files that are still served by the existing site.
-          for file in app.js styles.css slice.css slice.html slice.js favicon.svg _headers; do
-            curl --fail --location --silent --show-error --retry 3 "$BASE/$file" -o "$file"
+          mkdir -p /tmp/original
+          files=(app.js styles.css slice.css slice.html slice.js favicon.svg _headers index.html)
+          declare -A expected=(
+            [app.js]="7d63bf2af41db459a0fc2c92f45a82470491ec64db80e36353c09013fab1ef8b"
+            [styles.css]="7fd66fd8bb1534d94052a264cc3372a40155431d7f3f1980dc374446ec06706d"
+            [slice.css]="99b7a994d96ec0ae32bed5b993baae5fa069907cfa27e1dd2bf641dabfb3fe13"
+            [slice.html]="31ed239ed351425f7053f1a1b2e85b43d5c3ccc665ed860cdd7086ae349a2b27"
+            [slice.js]="278726014d4bf246d4c66e1664f391741eade8ca896c5dfd1e036cf9f53d04bc"
+            [favicon.svg]="6b83500222a076de19bdcd2a30862aaaf87bcfb6e993fcdd766ce416f9b9298c"
+            [_headers]="8607396d10abbb0daa9f1fefe163298151d4b1b8fd21896e94d79c97d6013a8d"
+            [index.html]="ac90cdd1552fdf39246bb8bd753dc1bd0f9b5afd4df8365c424f865d59982733"
+          )
+          report="| File | HTTP | Download | SHA-256 check |\n|---|---:|---|---|\n"
+          failed=0
+          for file in "${files[@]}"; do
+            curl --location --silent --show-error --retry 2 --output "/tmp/original/$file" --write-out "%{http_code}" "$BASE/$file" > "/tmp/original/$file.http" 2> "/tmp/original/$file.err"
+            rc=$?
+            http="$(cat "/tmp/original/$file.http" 2>/dev/null)"
+            if [ "$rc" -ne 0 ] || [ "$http" != "200" ]; then
+              err="$(cat "/tmp/original/$file.err" 2>/dev/null | tr '\n' ' ')"
+              report+="| $file | $http | failed (curl=$rc) | $err |\n"
+              failed=1
+              continue
+            fi
+            actual="$(sha256sum "/tmp/original/$file" | awk '{print $1}')"
+            if [ "$actual" = "${expected[$file]}" ]; then
+              report+="| $file | $http | downloaded | match |\n"
+            else
+              report+="| $file | $http | downloaded | mismatch: $actual |\n"
+              failed=1
+            fi
           done
-          curl --fail --location --silent --show-error --retry 3 "$BASE/index.html" -o /tmp/original-index.html
+          echo "$report" > RESTORE-REPORT.md
+          echo "$report" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$failed" -ne 0 ]; then
+            echo "Original files could not be verified from the live site; no project files were changed."
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add RESTORE-REPORT.md
+            git commit -m "Add report for original source verification"
+            git push
+            exit 0
+          fi
 
-          # Verify every downloaded file against the ZIP supplied in the conversation.
-          cat > /tmp/original-sha256.txt <<'HASHES'
-          7d63bf2af41db459a0fc2c92f45a82470491ec64db80e36353c09013fab1ef8b  app.js
-          7fd66fd8bb1534d94052a264cc3372a40155431d7f3f1980dc374446ec06706d  styles.css
-          99b7a994d96ec0ae32bed5b993baae5fa069907cfa27e1dd2bf641dabfb3fe13  slice.css
-          31ed239ed351425f7053f1a1b2e85b43d5c3ccc665ed860cdd7086ae349a2b27  slice.html
-          278726014d4bf246d4c66e1664f391741eade8ca896c5dfd1e036cf9f53d04bc  slice.js
-          6b83500222a076de19bdcd2a30862aaaf87bcfb6e993fcdd766ce416f9b9298c  favicon.svg
-          8607396d10abbb0daa9f1fefe163298151d4b1b8fd21896e94d79c97d6013a8d  _headers
-          HASHES
-          sha256sum -c /tmp/original-sha256.txt
-          printf '%s  %s\n' "ac90cdd1552fdf39246bb8bd753dc1bd0f9b5afd4df8365c424f865d59982733" "/tmp/original-index.html" | sha256sum -c -
+          # All downloaded source files match the uploaded ZIP exactly.
+          cp /tmp/original/app.js app.js
+          cp /tmp/original/styles.css styles.css
+          cp /tmp/original/slice.css slice.css
+          cp /tmp/original/slice.js slice.js
+          cp /tmp/original/slice.html slice.html
+          cp /tmp/original/favicon.svg favicon.svg
+          cp /tmp/original/_headers _headers
+          cp /tmp/original/index.html stitcher.html
 
-          # Keep the original stitching page and its scripts/styles intact.
-          cp /tmp/original-index.html stitcher.html
-
-          # Only change the two navigation destinations so the original page
-          # lives at /stitcher and links to the sibling /slice tool.
           python3 - <<'PY'
           from pathlib import Path
           for filename in ("stitcher.html", "slice.html"):
@@ -57,7 +86,6 @@ jobs:
               path.write_text(text, encoding="utf-8")
           PY
 
-          # The root index is the new tool-center homepage.
           cat > index.html <<'HTML'
           <!doctype html>
           <html lang="zh-CN">
@@ -97,46 +125,16 @@ jobs:
           </head>
           <body>
             <div class="wrap">
-              <header>
-                <a class="brand" href="/">QUALITELL<span>.</span></a>
-                <div class="top-label">PRODUCTIVITY TOOL CENTER</div>
-              </header>
+              <header><a class="brand" href="/">QUALITELL<span>.</span></a><div class="top-label">PRODUCTIVITY TOOL CENTER</div></header>
               <main>
-                <section class="hero">
-                  <div class="eyebrow">QUALITELL · WORKSPACE</div>
-                  <h1>在线工具中心</h1>
-                  <p class="intro">集中管理产品图片处理、详情页制作与日常设计辅助工具。选择需要的工具即可开始使用，更多功能将持续更新。</p>
-                </section>
+                <section class="hero"><div class="eyebrow">QUALITELL · WORKSPACE</div><h1>在线工具中心</h1><p class="intro">集中管理产品图片处理、详情页制作与日常设计辅助工具。选择需要的工具即可开始使用，更多功能将持续更新。</p></section>
                 <section aria-labelledby="tools-title">
-                  <div class="section-head">
-                    <h2 id="tools-title">全部工具</h2>
-                    <span>ALL TOOLS</span>
-                  </div>
+                  <div class="section-head"><h2 id="tools-title">全部工具</h2><span>ALL TOOLS</span></div>
                   <div class="grid">
-                    <a class="card" href="/stitcher">
-                      <div class="icon" aria-hidden="true">▤</div>
-                      <h3>详情页长图拼接器</h3>
-                      <p>导入详情页切图，调整顺序、输出宽度与间距，预览并导出完整长图。</p>
-                      <div class="card-foot"><span>打开工具</span><span class="status">已上线　↗</span></div>
-                    </a>
-                    <a class="card" href="/slice">
-                      <div class="icon" aria-hidden="true">▥</div>
-                      <h3>长图切片工具</h3>
-                      <p>将长图按指定高度或等分数量切片，预览结果并批量导出。</p>
-                      <div class="card-foot"><span>打开工具</span><span class="status">已上线　↗</span></div>
-                    </a>
-                    <div class="card planned">
-                      <div class="icon" aria-hidden="true">▧</div>
-                      <h3>图片批量处理</h3>
-                      <p>规划支持批量调整尺寸、格式转换、图片压缩与统一命名。</p>
-                      <div class="card-foot"><span>功能开发中</span><span class="status">规划中</span></div>
-                    </div>
-                    <div class="card planned">
-                      <div class="icon" aria-hidden="true">✦</div>
-                      <h3>更多设计工具</h3>
-                      <p>根据团队日常工作需求，逐步扩展更多实用工具。</p>
-                      <div class="card-foot"><span>持续更新</span><span class="status">规划中</span></div>
-                    </div>
+                    <a class="card" href="/stitcher"><div class="icon" aria-hidden="true">▤</div><h3>详情页长图拼接器</h3><p>导入详情页切图，调整顺序、输出宽度与间距，预览并导出完整长图。</p><div class="card-foot"><span>打开工具</span><span class="status">已上线　↗</span></div></a>
+                    <a class="card" href="/slice"><div class="icon" aria-hidden="true">▥</div><h3>长图切片工具</h3><p>将长图按指定高度或等分数量切片，预览结果并批量导出。</p><div class="card-foot"><span>打开工具</span><span class="status">已上线　↗</span></div></a>
+                    <div class="card planned"><div class="icon" aria-hidden="true">▧</div><h3>图片批量处理</h3><p>规划支持批量调整尺寸、格式转换、图片压缩与统一命名。</p><div class="card-foot"><span>功能开发中</span><span class="status">规划中</span></div></div>
+                    <div class="card planned"><div class="icon" aria-hidden="true">✦</div><h3>更多设计工具</h3><p>根据团队日常工作需求，逐步扩展更多实用工具。</p><div class="card-foot"><span>持续更新</span><span class="status">规划中</span></div></div>
                   </div>
                 </section>
               </main>
@@ -146,9 +144,8 @@ jobs:
           </html>
           HTML
 
-          # Clean URL /stitcher serves stitcher.html; /slice serves slice.html.
           printf '%s\n' '/stitch /stitcher 301' > _redirects
-
+          rm -f RESTORE-REPORT.md
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add index.html stitcher.html app.js styles.css slice.html slice.css slice.js favicon.svg _headers _redirects
