@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>详情页长图拼接器</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none">
+          <rect x="10" y="7" width="20" height="9" rx="2.5" fill="currentColor" opacity=".35"/>
+          <rect x="10" y="16.5" width="14" height="9" rx="2.5" fill="currentColor" opacity=".65"/>
+          <rect x="10" y="26" width="20" height="7" rx="2.5" fill="currentColor"/>
+          <circle cx="30.5" cy="9.5" r="3.5" fill="#5eead4"/>
+        </svg>
+      </span>
+      <div class="brand-text">
+        <h1>长图拼接器</h1>
+        <p>详情页切图 · 一键合成长图</p>
+      </div>
+    </div>
+
+    <nav class="mode-switch" aria-label="功能切换">
+      <a href="/stitcher" class="is-active" aria-current="page">拼长图</a>
+      <a href="/slice">长图切图</a>
+    </nav>
+
+    <div class="header-actions">
+      <span class="privacy-pill">
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <rect x="3.2" y="7" width="9.6" height="7" rx="2" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M5.4 7V5.2a2.6 2.6 0 0 1 5.2 0V7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        本地处理 · 图片不上传
+      </span>
+      <button type="button" class="btn btn-ghost" id="help-btn">
+        <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <circle cx="9" cy="9" r="7" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M7.2 6.9a1.9 1.9 0 1 1 2.7 1.7c-.5.3-.9.7-.9 1.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <circle cx="9" cy="12.7" r=".9" fill="currentColor"/>
+        </svg>
+        使用说明
+      </button>
+      <button type="button" class="btn btn-ghost" id="folder-btn">
+        <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <path d="M2.2 5.4c0-.9.7-1.6 1.6-1.6h3l1.5 1.8h5.9c.9 0 1.6.7 1.6 1.6v5.9c0 .9-.7 1.6-1.6 1.6H3.8c-.9 0-1.6-.7-1.6-1.6V5.4Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+        </svg>
+        导入文件夹
+      </button>
+      <button type="button" class="btn btn-dark" id="add-btn">
+        <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <path d="M9 3.6v10.8M3.6 9h10.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        添加切图
+      </button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="queue-panel" aria-label="切图队列">
+      <div class="panel-header">
+        <div class="panel-title">
+          <h2>切图队列</h2>
+          <span class="count-badge" id="queue-count">0</span>
+        </div>
+        <button type="button" class="icon-btn" id="clear-btn" title="清空队列" aria-label="清空队列">
+          <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <path d="M3.5 5.2h11M7.2 5.2V3.8c0-.6.5-1.1 1.1-1.1h1.4c.6 0 1.1.5 1.1 1.1v1.4M5.1 5.2l.6 9c0 .6.5 1 1.1 1h4.4c.6 0 1-.4 1.1-1l.6-9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            <path d="M7.7 8v4.4M10.3 8v4.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="sort-bar">
+        <label for="sort-select">排序</label>
+        <select id="sort-select" class="sort-select">
+          <option value="name-asc">文件名 A → Z</option>
+          <option value="name-desc">文件名 Z → A</option>
+          <option value="mtime-desc">修改时间 新 → 旧</option>
+          <option value="mtime-asc">修改时间 旧 → 新</option>
+          <option value="manual">手动顺序</option>
+        </select>
+      </div>
+
+      <div class="queue-list-wrap">
+        <ul class="queue-list" id="queue-list"></ul>
+        <div class="queue-empty" id="queue-empty">
+          <span class="queue-empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none">
+              <rect x="10" y="9" width="24" height="8" rx="2.4" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="10" y="20" width="24" height="8" rx="2.4" stroke="currentColor" stroke-width="1.5" opacity=".55"/>
+              <rect x="10" y="31" width="17" height="8" rx="2.4" stroke="currentColor" stroke-width="1.5" opacity=".3"/>
+            </svg>
+          </span>
+          <strong>还没有切图</strong>
+          <p>点击「添加切图」，或把整个文件夹拖进来</p>
+        </div>
+      </div>
+
+      <div class="queue-footer">
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M8 2.2v7.2M5.2 6.7 8 9.5l2.8-2.8M3 11.2v1.1c0 .8.7 1.5 1.5 1.5h7c.8 0 1.5-.7 1.5-1.5v-1.1" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        支持 PNG / JPG / WebP，可整文件夹拖入
+      </div>
+    </aside>
+
+    <section class="preview-panel" aria-label="长图预览">
+      <div class="preview-toolbar">
+        <div class="preview-title">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span>长图预览</span>
+          <span class="dim-chip" id="preview-dim">—</span>
+        </div>
+        <div class="toolbar-actions">
+          <button type="button" class="toolbar-btn" id="guides-btn" aria-pressed="false" title="显示切片编号和分割线">
+            <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <path d="M3 5.4h12M3 9h12M3 12.6h12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-dasharray="2.5 2.5"/>
+            </svg>
+            辅助线
+          </button>
+          <div class="zoom-group" role="group" aria-label="预览缩放">
+            <button type="button" class="zoom-btn" id="zoom-out" aria-label="缩小">−</button>
+            <button type="button" class="zoom-fit" id="zoom-fit" aria-label="适应预览宽度">适应</button>
+            <span class="zoom-label" id="zoom-label">100%</span>
+            <button type="button" class="zoom-btn" id="zoom-in" aria-label="放大">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-viewport" id="preview-viewport">
+        <div class="preview-stage" id="preview-stage">
+          <div class="empty-state" id="empty-state">
+            <span class="empty-illustration" aria-hidden="true">
+              <svg viewBox="0 0 120 96" fill="none">
+                <rect x="28" y="12" width="64" height="18" rx="5" fill="#ffffff" stroke="#c9cbc4" stroke-width="1.5"/>
+                <rect x="22" y="34" width="76" height="24" rx="6" fill="#ffffff" stroke="#c9cbc4" stroke-width="1.5"/>
+                <rect x="28" y="62" width="58" height="20" rx="5" fill="#ffffff" stroke="#c9cbc4" stroke-width="1.5"/>
+                <path d="M60 41v12M54 47h12" stroke="#0f766e" stroke-width="2" stroke-linecap="round"/>
+                <path d="M92 26l3.2 6.6 7.3 1-5.3 5.1 1.3 7.2-6.5-3.4-6.5 3.4 1.3-7.2-5.3-5.1 7.3-1L92 26Z" fill="#ccfbf1"/>
+              </svg>
+            </span>
+            <h2>把详情页切图拖到这里</h2>
+            <p>自动按文件名排序，无缝拼成一张长图；图片只在本地处理。</p>
+            <div class="empty-actions">
+              <button type="button" class="btn btn-dark" id="empty-add-btn">
+                <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                  <path d="M9 3.6v10.8M3.6 9h10.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+                选择切图
+              </button>
+              <button type="button" class="btn btn-ghost" id="empty-folder-btn">导入整个文件夹</button>
+            </div>
+            <div class="empty-tip">
+              <kbd>Ctrl</kbd><span>+</span><kbd>O</kbd>
+              <span>添加图片 · 也可直接粘贴截图</span>
+            </div>
+          </div>
+          <div class="preview-page" id="preview-page" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="settings-panel" aria-label="输出设置">
+      <div class="panel-header">
+        <div class="panel-title">
+          <h2>输出设置</h2>
+        </div>
+        <button type="button" class="text-btn" id="reset-settings">恢复默认</button>
+      </div>
+
+      <div class="settings-scroll">
+        <section class="setting-block">
+          <div class="setting-head">
+            <label for="width-input">输出宽度</label>
+            <span class="setting-note">常用 750 / 790 / 800</span>
+          </div>
+          <div class="width-control">
+            <select id="width-preset" class="width-preset" aria-label="常用输出宽度">
+              <option value="750">750 · 淘宝/天猫</option>
+              <option value="790">790 · 京东</option>
+              <option value="800">800 · 通用</option>
+              <option value="828">828 · 手机端</option>
+              <option value="1000">1000 · 高清</option>
+              <option value="1080">1080 · 高清</option>
+              <option value="1200">1200 · 超清</option>
+              <option value="custom">自定义</option>
+            </select>
+            <div class="number-wrap">
+              <input id="width-input" type="number" min="100" max="4000" step="10" value="750" inputmode="numeric" aria-label="自定义输出宽度">
+              <span>px</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="setting-block">
+          <div class="setting-head">
+            <label for="gap-input">图片间距</label>
+            <span class="value-badge" id="gap-value">0 px</span>
+          </div>
+          <input id="gap-input" class="range" type="range" min="0" max="64" step="1" value="0">
+          <p class="setting-help">做无缝长图时保持 0；需要留白再调大。</p>
+        </section>
+
+        <section class="setting-block">
+          <div class="setting-head">
+            <span class="setting-label">背景颜色</span>
+          </div>
+          <div class="color-row">
+            <input id="bg-color" class="color-input" type="color" value="#ffffff" aria-label="背景颜色">
+            <input id="bg-hex" class="hex-input" type="text" value="#ffffff" maxlength="7" spellcheck="false" aria-label="背景颜色十六进制值">
+            <label class="mini-check">
+              <input id="transparent-bg" type="checkbox">
+              透明
+            </label>
+          </div>
+          <p class="setting-help">只在图片间距或宽度不一致时可见。</p>
+        </section>
+
+        <section class="setting-block">
+          <div class="setting-head">
+            <span class="setting-label">导出格式</span>
+          </div>
+          <div class="segmented" id="format-group" role="group" aria-label="导出格式">
+            <button type="button" data-format="png" class="is-active" aria-pressed="true">PNG</button>
+            <button type="button" data-format="jpg" aria-pressed="false">JPG</button>
+            <button type="button" data-format="webp" aria-pressed="false">WebP</button>
+          </div>
+          <p class="setting-help" id="format-hint">PNG 无损，适合详情页，文件会稍大。</p>
+          <div class="quality-row" id="quality-wrap" hidden>
+            <div class="setting-head">
+              <label for="quality-input" id="quality-label">JPG 质量</label>
+              <span class="value-badge" id="quality-value">92%</span>
+            </div>
+            <input id="quality-input" class="range" type="range" min="50" max="100" step="1" value="92">
+          </div>
+        </section>
+
+        <section class="summary-card" aria-label="导出摘要">
+          <div class="summary-row">
+            <span>输出尺寸</span>
+            <strong id="summary-size">—</strong>
+          </div>
+          <div class="summary-row">
+            <span>像素总量</span>
+            <strong id="summary-mp">—</strong>
+          </div>
+          <div class="summary-row">
+            <span>切片数量</span>
+            <strong id="summary-count">0 张</strong>
+          </div>
+          <div class="summary-scale" id="summary-scale" hidden></div>
+        </section>
+
+        <div class="warning" id="limit-warning" hidden>
+          <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <path d="M9 2.6 16 15H2L9 2.6Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M9 7v4.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <circle cx="9" cy="13.2" r=".85" fill="currentColor"/>
+          </svg>
+          <span id="warning-text"></span>
+        </div>
+
+        <div class="options">
+          <label class="check-row">
+            <input id="auto-fit" type="checkbox" checked>
+            <span>
+              <strong>超限时自动缩小</strong>
+              <small>超过浏览器单图上限时，仍导出为一张长图</small>
+            </span>
+          </label>
+          <label class="check-row">
+            <input id="no-upscale" type="checkbox">
+            <span>
+              <strong>不放大宽度不足的切图</strong>
+              <small>小图保持原像素宽度，居中放在画布上</small>
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <div class="export-footer">
+        <button type="button" class="export-btn" id="export-btn" disabled>
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M10 3v9M6.4 8.6 10 12.2l3.6-3.6M4 14.5v1.1c0 .8.7 1.4 1.5 1.4h9c.8 0 1.5-.6 1.5-1.4v-1.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span id="export-label">导出长图</span>
+        </button>
+        <p class="export-note">在本机生成，不会上传任何图片</p>
+      </div>
+    </aside>
+  </main>
+
+  <input id="file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/avif" multiple hidden>
+  <input id="folder-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/avif" webkitdirectory directory multiple hidden>
+
+  <div class="drop-overlay" id="drop-overlay" hidden>
+    <div class="drop-overlay-card">
+      <span class="drop-overlay-icon" aria-hidden="true">
+        <svg viewBox="0 0 64 64" fill="none">
+          <path d="M20 44h-3.5A8.5 8.5 0 0 1 16 27.2 13 13 0 0 1 41.4 26 9.5 9.5 0 0 1 47 44h-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M32 30v18M25.5 41.5 32 48l6.5-6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <h2>松开鼠标，导入切图</h2>
+      <p>支持图片文件或整个文件夹</p>
+    </div>
+  </div>
+
+  <div class="export-overlay" id="export-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="export-title">
+    <div class="export-card">
+      <span class="export-spinner" aria-hidden="true"></span>
+      <h3 id="export-title">正在合成长图</h3>
+      <p id="export-status">准备切图…</p>
+      <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progress-fill"></div></div>
+      <p class="export-hint">长图较大时需要几秒，请保持页面打开。</p>
+    </div>
+  </div>
+
+  <dialog class="help-dialog" id="help-dialog">
+    <div class="help-head">
+      <div>
+        <span class="help-kicker">使用说明</span>
+        <h2>三步合成长图</h2>
+      </div>
+      <form method="dialog">
+        <button class="icon-btn" value="close" aria-label="关闭使用说明">
+          <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <path d="m4.5 4.5 9 9M13.5 4.5l-9 9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </form>
+    </div>
+    <div class="help-body">
+      <div class="help-step">
+        <span class="step-num">01</span>
+        <div>
+          <strong>导入切图</strong>
+          <p>把整个文件夹拖进窗口，或点击「导入文件夹 / 添加切图」。文件名建议用 01、02、03 这样的顺序。</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <span class="step-num">02</span>
+        <div>
+          <strong>确认顺序</strong>
+          <p>默认按文件名自然排序，01、02、10 不会排错。拖动左侧卡片，或用卡片上的 ↑ ↓ 调整；手动拖动后会自动切换到「手动顺序」。</p>
+        </div>
+      </div>
+      <div class="help-step">
+        <span class="step-num">03</span>
+        <div>
+          <strong>选择宽度并导出</strong>
+          <p>淘宝/天猫常用 750px，京东常用 790px。做无缝长图时「图片间距」设为 0，点「导出长图」即可下载 PNG。</p>
+        </div>
+      </div>
+      <div class="help-tip">
+        <strong>关于超长图</strong>
+        <p>Chrome 单张画布最高 32,767px。超出时保持「超限时自动缩小」开启，工具会等比缩小后仍导出为一张图。</p>
+      </div>
+      <div class="help-shortcuts">
+        <span><kbd>Ctrl</kbd> + <kbd>O</kbd> 添加图片</span>
+        <span><kbd>Ctrl</kbd> + <kbd>Enter</kbd> 导出</span>
+        <span><kbd>Ctrl</kbd> + <kbd>V</kbd> 粘贴截图</span>
+      </div>
+    </div>
+    <form method="dialog" class="help-footer">
+      <button class="btn btn-dark" value="close">知道了</button>
+    </form>
+  </dialog>
+
+  <div class="toast-stack" id="toast-stack" role="status" aria-live="polite"></div>
+
+  <noscript>
+    <div class="noscript">需要启用 JavaScript 才能拼合图片。</div>
+  </noscript>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

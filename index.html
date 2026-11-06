@@ -1,17 +1,55 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Qualitell Tool Center</title><meta name="description" content="Qualitell 在线效率工具中心">
-<style>
-:root{--ink:#17211b;--muted:#738078;--line:#e5ebe6;--green:#477b5d;--soft:#eef4ef}*{box-sizing:border-box}body{margin:0;background:#f7f9f7;color:var(--ink);font:15px/1.6 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}.wrap{max-width:1120px;margin:auto;padding:0 28px}header{height:76px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}.brand{font-size:20px;font-weight:800;letter-spacing:.04em}.brand i{color:var(--green);font-style:normal}.topnote{font-size:12px;color:var(--muted);letter-spacing:.13em}.hero{padding:76px 0 48px}.eyebrow{font-size:11px;letter-spacing:.2em;color:var(--green);font-weight:800}.hero h1{font-size:clamp(36px,6vw,58px);line-height:1.12;letter-spacing:-.045em;margin:16px 0}.hero p{color:var(--muted);max-width:570px;margin:0}.section-head{display:flex;justify-content:space-between;align-items:end;margin:22px 0}.section-head h2{font-size:19px;margin:0}.section-head span{font-size:12px;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding-bottom:84px}.card{position:relative;display:flex;flex-direction:column;min-height:240px;padding:25px;background:white;border:1px solid var(--line);border-radius:15px;color:inherit;text-decoration:none;transition:.2s}.card[href]:hover{transform:translateY(-4px);border-color:#a9c4b1;box-shadow:0 14px 34px #193b2410}.ico{width:48px;height:48px;border-radius:12px;background:var(--soft);display:grid;place-items:center;font-size:23px;margin-bottom:25px}.card h3{font-size:17px;margin:0 0 8px}.card p{font-size:13px;color:var(--muted);margin:0;line-height:1.75}.meta{margin-top:auto;padding-top:22px;font-size:12px;color:var(--green);font-weight:700}.soon{background:#fbfcfb;border-style:dashed}.soon .meta{color:#98a29b}.tag{position:absolute;right:18px;top:18px;font-size:10px;color:#548062;background:#edf5ef;padding:4px 8px;border-radius:20px}.tag.wait{color:#8a918c;background:#f0f2f0}footer{border-top:1px solid var(--line);padding:24px 0;color:#929c95;font-size:12px}@media(max-width:760px){.wrap{padding:0 19px}.hero{padding:56px 0 36px}.grid{grid-template-columns:1fr;gap:12px}.card{min-height:205px}.topnote{font-size:10px}}
-</style></head><body><div class="wrap">
-<header><div class="brand">QUALITELL<i>.</i></div><div class="topnote">PRODUCTIVITY TOOL CENTER</div></header>
-<main><section class="hero"><div class="eyebrow">WORK SMARTER · CREATE FASTER</div><h1>Qualitell Tool Center</h1><p>在线效率工具中心。集中管理产品图片处理、详情页制作与日常设计辅助工具，更多功能持续更新。</p></section>
-<div class="section-head"><h2>全部工具 <span style="font-weight:400;color:#89948c">/ ALL TOOLS</span></h2><span>选择工具开始使用</span></div>
-<section class="grid">
-<a class="card" href="/stitch"><span class="tag">已上线</span><div class="ico">▤</div><h3>详情页长图拼接器</h3><p>批量导入详情页图片，自由排序、调整宽度与间距，拼接并导出完整长图。</p><div class="meta">打开工具　↗</div></a>
-<a class="card" href="/slice"><span class="tag">已上线</span><div class="ico">▥</div><h3>长图切片工具</h3><p>将长图按固定高度或等分数量切片，预览切片结果并批量导出。</p><div class="meta">打开工具　↗</div></a>
-<div class="card soon"><span class="tag wait">规划中</span><div class="ico">▧</div><h3>图片批量处理</h3><p>计划支持批量改尺寸、格式转换、压缩与统一命名。</p><div class="meta">功能开发中</div></div>
-<div class="card soon"><span class="tag wait">规划中</span><div class="ico">✦</div><h3>更多设计工具</h3><p>后续根据团队实际工作流程持续增加实用工具。</p><div class="meta">敬请期待</div></div>
-</section></main><footer>© 2026 QUALITELL. All rights reserved.</footer></div></body></html>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f8f5">
+  <title>Qualitell Tool Center · 在线工具中心</title>
+  <meta name="description" content="Qualitell 在线工具中心，集中使用图片拼接、长图切片和更多设计效率工具。">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <style>
+    :root{--ink:#202820;--muted:#748078;--line:#e5eae5;--green:#3f7652;--green-soft:#edf4ee;--paper:#f6f8f5;--white:#fff}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--paper);color:var(--ink);font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}
+    a{color:inherit;text-decoration:none}
+    .wrap{width:min(1120px,calc(100% - 48px));margin:0 auto}
+    header{height:76px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+    .brand{font-size:20px;font-weight:800;letter-spacing:.06em}.brand span{color:var(--green)}
+    .top-label{font-size:11px;letter-spacing:.16em;color:#879188}
+    .hero{padding:78px 0 54px}
+    .eyebrow{font-size:11px;font-weight:750;letter-spacing:.2em;color:var(--green)}
+    h1{font-size:clamp(36px,5.5vw,56px);line-height:1.12;letter-spacing:-.045em;margin:17px 0 16px}
+    .intro{max-width:650px;color:var(--muted);font-size:15px;line-height:1.9;margin:0}
+    .section-head{display:flex;align-items:end;justify-content:space-between;margin:0 0 20px}
+    .section-head h2{font-size:18px;margin:0}.section-head span{font-size:11px;color:#8b958d;letter-spacing:.1em}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;padding-bottom:82px}
+    .card{min-height:236px;padding:25px;background:var(--white);border:1px solid var(--line);border-radius:14px;display:flex;flex-direction:column;transition:transform .2s,border-color .2s,box-shadow .2s}
+    a.card:hover{transform:translateY(-4px);border-color:#aac5b0;box-shadow:0 14px 34px rgba(27,56,34,.07)}
+    .icon{width:48px;height:48px;display:grid;place-items:center;background:var(--green-soft);border-radius:12px;color:var(--green);font-size:23px;margin-bottom:24px}
+    .card h3{font-size:17px;margin:0 0 9px}.card p{font-size:13px;line-height:1.8;color:var(--muted);margin:0}
+    .card-foot{margin-top:auto;padding-top:22px;display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--green);font-weight:650}
+    .status{font-size:10px;color:#4d7d5a;background:#edf5ee;border-radius:30px;padding:4px 9px;font-weight:600}
+    .planned{background:#fafbfa;border-style:dashed}.planned .icon{background:#f0f2ef;color:#879188}.planned .card-foot{color:#929b94}.planned .status{background:#f0f2f0;color:#858e87}
+    footer{border-top:1px solid var(--line);padding:23px 0;color:#929b94;font-size:11px}
+    @media(max-width:760px){.wrap{width:calc(100% - 36px)}.hero{padding:56px 0 40px}.grid{grid-template-columns:1fr;gap:12px;padding-bottom:56px}.card{min-height:205px;padding:22px}.top-label{font-size:9px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header><a class="brand" href="/">QUALITELL<span>.</span></a><div class="top-label">PRODUCTIVITY TOOL CENTER</div></header>
+    <main>
+      <section class="hero"><div class="eyebrow">QUALITELL · WORKSPACE</div><h1>在线工具中心</h1><p class="intro">集中管理产品图片处理、详情页制作与日常设计辅助工具。选择需要的工具即可开始使用，更多功能将持续更新。</p></section>
+      <section aria-labelledby="tools-title">
+        <div class="section-head"><h2 id="tools-title">全部工具</h2><span>ALL TOOLS</span></div>
+        <div class="grid">
+          <a class="card" href="/stitcher"><div class="icon" aria-hidden="true">▤</div><h3>详情页长图拼接器</h3><p>导入详情页切图，调整顺序、输出宽度与间距，预览并导出完整长图。</p><div class="card-foot"><span>打开工具</span><span class="status">已上线　↗</span></div></a>
+          <a class="card" href="/slice"><div class="icon" aria-hidden="true">▥</div><h3>长图切片工具</h3><p>将长图按指定高度或等分数量切片，预览结果并批量导出。</p><div class="card-foot"><span>打开工具</span><span class="status">已上线　↗</span></div></a>
+          <div class="card planned"><div class="icon" aria-hidden="true">▧</div><h3>图片批量处理</h3><p>规划支持批量调整尺寸、格式转换、图片压缩与统一命名。</p><div class="card-foot"><span>功能开发中</span><span class="status">规划中</span></div></div>
+          <div class="card planned"><div class="icon" aria-hidden="true">✦</div><h3>更多设计工具</h3><p>根据团队日常工作需求，逐步扩展更多实用工具。</p><div class="card-foot"><span>持续更新</span><span class="status">规划中</span></div></div>
+        </div>
+      </section>
+    </main>
+    <footer>© 2026 QUALITELL. All rights reserved.</footer>
+  </div>
+</body>
+</html>

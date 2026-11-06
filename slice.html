@@ -1,1 +1,381 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>长图切片工具 · Qualitell</title><link rel="stylesheet" href="/styles.css"></head><body><header class="top"><a class="brand" href="/">QUALITELL <span>TOOL CENTER</span></a><nav><a href="/stitch">长图拼接</a><a class="active" href="/slice">长图切片</a><a href="/">工具中心 ↗</a></nav></header><main class="shell"><section class="intro"><div class="eyebrow">IMAGE WORKFLOW / 02</div><h1>长图切片工具</h1><p>按固定高度或指定份数切分长图，并批量下载切片。</p></section><section class="workspace" style="grid-template-columns:280px minmax(0,1fr)"><aside class="panel"><h2>源图片</h2><label class="drop" for="source">＋<b>选择长图</b><span>PNG / JPG / WebP</span></label><input id="source" type="file" accept="image/*" hidden><div id="meta" class="hint">尚未选择图片</div><h2 style="margin-top:24px">切片设置</h2><label class="settings-label">切片方式<select id="mode"><option value="fixed">固定高度</option><option value="equal">等分数量</option></select></label><label class="settings-label">高度（px） / 份数<input id="amount" type="number" min="1" value="1000"></label><button id="make" class="btn primary" disabled>生成切片</button><button id="download" class="btn secondary" disabled style="margin-top:8px">批量下载 PNG</button></aside><section class="panel"><div class="panel-title"><h2>切片结果</h2><span id="result">等待导入</span></div><div id="pieces" class="canvas-wrap" style="display:block"><p class="empty">选择长图并生成切片</p></div></section></section></main><script src="/slice.js"></script></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>长图切图 · 详情页切片</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="slice.css">
+</head>
+<body class="slice-page">
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none">
+          <rect x="10" y="7" width="20" height="9" rx="2.5" fill="currentColor" opacity=".35"/>
+          <rect x="10" y="16.5" width="14" height="9" rx="2.5" fill="currentColor" opacity=".65"/>
+          <rect x="10" y="26" width="20" height="7" rx="2.5" fill="currentColor"/>
+          <circle cx="30.5" cy="9.5" r="3.5" fill="#5eead4"/>
+        </svg>
+      </span>
+      <div class="brand-text">
+        <h1>长图拼接器</h1>
+        <p>长图切图 · 按切点导出</p>
+      </div>
+    </div>
+
+    <nav class="mode-switch" aria-label="功能切换">
+      <a href="/stitcher">拼长图</a>
+      <a href="/slice" class="is-active" aria-current="page">长图切图</a>
+    </nav>
+
+    <div class="header-actions is-single">
+      <span class="privacy-pill">
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <rect x="3.2" y="7" width="9.6" height="7" rx="2" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M5.4 7V5.2a2.6 2.6 0 0 1 5.2 0V7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+        </svg>
+        本地处理 · 图片不上传
+      </span>
+      <button type="button" class="btn btn-dark" id="import-btn">
+        <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
+          <path d="M9 3.6v10.8M3.6 9h10.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+        导入长图
+      </button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="queue-panel slice-side" aria-label="切片列表">
+      <div class="panel-header">
+        <div class="panel-title">
+          <h2>切片列表</h2>
+          <span class="count-badge" id="slice-count">0</span>
+        </div>
+        <button type="button" class="icon-btn" id="remove-image-btn" title="移除长图" aria-label="移除长图" hidden>
+          <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <path d="M3.5 5.2h11M7.2 5.2V3.8c0-.6.5-1.1 1.1-1.1h1.4c.6 0 1.1.5 1.1 1.1v1.4M5.1 5.2l.6 9c0 .6.5 1 1.1 1h4.4c.6 0 1-.4 1.1-1l.6-9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            <path d="M7.7 8v4.4M10.3 8v4.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="source-meta" id="source-meta" hidden>
+        <span class="source-thumb"><img id="source-thumb" alt=""></span>
+        <span class="source-info">
+          <strong id="source-name"></strong>
+          <small id="source-detail"></small>
+        </span>
+      </div>
+
+      <div class="slice-list-wrap">
+        <ul class="slice-list" id="slice-list"></ul>
+        <div class="queue-empty slice-empty" id="slice-empty">
+          <span class="queue-empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 48 48" fill="none">
+              <rect x="17" y="7" width="14" height="34" rx="3" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M9 17h10M9 24h10M9 31h10M30 17h9M30 24h9M30 31h9" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-dasharray="2 3" opacity=".7"/>
+            </svg>
+          </span>
+          <strong>等待长图</strong>
+          <p>导入后默认按 1000px 高度切成多片</p>
+        </div>
+      </div>
+
+      <div class="queue-footer">
+        <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M3 4.5h10M3 8h10M3 11.5h10" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/>
+        </svg>
+        只切横线 · 可导出 ZIP 压缩包
+      </div>
+    </aside>
+
+    <section class="preview-panel" aria-label="长图预览">
+      <div class="preview-toolbar">
+        <div class="preview-title">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span>长图预览</span>
+          <span class="dim-chip" id="preview-dim">—</span>
+          <span class="cut-chip" id="cut-count">0 片</span>
+        </div>
+        <div class="toolbar-actions">
+          <span class="manual-hint" id="manual-hint" hidden>单击图片添加切点</span>
+          <div class="zoom-group" role="group" aria-label="预览缩放">
+            <button type="button" class="zoom-btn" id="zoom-out" aria-label="缩小">−</button>
+            <button type="button" class="zoom-fit" id="zoom-fit" aria-label="适应预览宽度">适应</button>
+            <span class="zoom-label" id="zoom-label">100%</span>
+            <button type="button" class="zoom-btn" id="zoom-in" aria-label="放大">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-viewport" id="preview-viewport">
+        <div class="preview-stage" id="preview-stage">
+          <div class="empty-state slice-empty-state" id="empty-state">
+            <span class="empty-illustration" aria-hidden="true">
+              <svg viewBox="0 0 140 108" fill="none">
+                <rect x="48" y="8" width="44" height="92" rx="5" fill="#ffffff" stroke="#c9cbc4" stroke-width="1.5"/>
+                <path d="M48 32h44M48 57h44M48 80h44" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 4"/>
+                <path d="M22 38h17M22 38l5-5M22 38l5 5M101 69h17M118 69l-5-5M118 69l-5 5" stroke="#0f766e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <rect x="57" y="38" width="26" height="18" rx="3" fill="#ccfbf1"/>
+                <rect x="57" y="63" width="26" height="13" rx="3" fill="#e6f5f1"/>
+              </svg>
+            </span>
+            <h2>把一整张长图拖进来</h2>
+            <p>自动按高度切分，也可以像 PS 一样手动添加切点，最后一次性导出 ZIP。</p>
+            <div class="empty-actions">
+              <button type="button" class="btn btn-dark" id="empty-import-btn">
+                <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                  <path d="M9 3.6v10.8M3.6 9h10.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                </svg>
+                选择长图
+              </button>
+            </div>
+            <div class="empty-tip">
+              <kbd>Ctrl</kbd><span>+</span><kbd>O</kbd>
+              <span>选择长图 · 也可直接粘贴截图</span>
+            </div>
+          </div>
+
+          <div class="slice-canvas" id="slice-canvas" hidden>
+            <img id="source-image" alt="待切长图" draggable="false">
+            <div class="slice-highlight" id="slice-highlight" hidden></div>
+            <div class="cut-layer" id="cut-layer"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="settings-panel" aria-label="切图设置">
+      <div class="panel-header">
+        <div class="panel-title">
+          <h2>切图设置</h2>
+        </div>
+        <button type="button" class="text-btn" id="reset-settings">恢复默认</button>
+      </div>
+
+      <div class="settings-scroll">
+        <section class="setting-block">
+          <div class="setting-head">
+            <span class="setting-label">切图方式</span>
+          </div>
+          <div class="segmented" id="mode-group" role="group" aria-label="切图方式">
+            <button type="button" data-mode="fixed" class="is-active" aria-pressed="true">固定高度</button>
+            <button type="button" data-mode="equal" aria-pressed="false">等分数量</button>
+            <button type="button" data-mode="manual" aria-pressed="false">手动切点</button>
+          </div>
+          <p class="setting-help" id="mode-hint">按固定高度从上往下切，最后一片可能短一些。</p>
+        </section>
+
+        <section class="setting-block" id="fixed-block">
+          <div class="setting-head">
+            <label for="height-input">每片高度</label>
+            <span class="setting-note">常用 800 / 1000 / 1200</span>
+          </div>
+          <div class="width-control">
+            <select id="height-preset" class="width-preset" aria-label="常用切片高度">
+              <option value="600">600 px</option>
+              <option value="800">800 px</option>
+              <option value="1000">1000 px</option>
+              <option value="1200">1200 px</option>
+              <option value="1500">1500 px</option>
+              <option value="2000">2000 px</option>
+              <option value="custom">自定义</option>
+            </select>
+            <div class="number-wrap">
+              <input id="height-input" type="number" min="100" max="30000" step="10" value="1000" inputmode="numeric" aria-label="每片高度">
+              <span>px</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="setting-block" id="equal-block" hidden>
+          <div class="setting-head">
+            <label for="count-input">切片数量</label>
+            <span class="value-badge" id="count-value">3 片</span>
+          </div>
+          <div class="equal-control">
+            <input id="count-input" class="range" type="range" min="2" max="50" step="1" value="3">
+            <div class="number-wrap compact-number">
+              <input id="count-number" type="number" min="2" max="50" step="1" value="3" aria-label="切片数量">
+              <span>片</span>
+            </div>
+          </div>
+          <p class="setting-help">把整张长图平均切开，适合需要每片高度接近的场景。</p>
+        </section>
+
+        <section class="setting-block" id="manual-block" hidden>
+          <div class="setting-head">
+            <span class="setting-label">手动切点</span>
+            <span class="manual-actions">
+              <button type="button" class="text-btn" id="undo-cut">撤销</button>
+              <button type="button" class="text-btn" id="clear-cuts">清空</button>
+            </span>
+          </div>
+          <div class="cut-chips" id="cut-chips"></div>
+          <p class="setting-help">在预览图上单击添加切点；拖动切点调整；双击切点删除，也可点上方切点标签移除。</p>
+        </section>
+
+        <section class="setting-block">
+          <div class="setting-head">
+            <label for="output-width">输出宽度</label>
+          </div>
+          <div class="width-control">
+            <select id="output-width" class="width-preset" aria-label="输出宽度">
+              <option value="original">原图宽度（不缩放）</option>
+              <option value="750">750 · 淘宝/天猫</option>
+              <option value="790">790 · 京东</option>
+              <option value="800">800 · 通用</option>
+              <option value="1000">1000 · 高清</option>
+              <option value="1200">1200 · 超清</option>
+              <option value="custom">自定义</option>
+            </select>
+            <div class="number-wrap">
+              <input id="output-width-input" type="number" min="100" max="10000" step="10" value="750" inputmode="numeric" aria-label="自定义输出宽度">
+              <span>px</span>
+            </div>
+          </div>
+          <p class="setting-help" id="output-width-hint">默认保持原图宽度，不缩放。</p>
+        </section>
+
+        <section class="setting-block">
+          <div class="setting-head">
+            <span class="setting-label">导出格式</span>
+          </div>
+          <div class="segmented" id="format-group" role="group" aria-label="导出格式">
+            <button type="button" data-format="png" class="is-active" aria-pressed="true">PNG</button>
+            <button type="button" data-format="jpg" aria-pressed="false">JPG</button>
+            <button type="button" data-format="webp" aria-pressed="false">WebP</button>
+          </div>
+          <p class="setting-help" id="format-hint">PNG 无损，适合详情页。</p>
+          <div class="quality-row" id="quality-wrap" hidden>
+            <div class="setting-head">
+              <label for="quality-input" id="quality-label">JPG 质量</label>
+              <span class="value-badge" id="quality-value">92%</span>
+            </div>
+            <input id="quality-input" class="range" type="range" min="50" max="100" step="1" value="92">
+          </div>
+        </section>
+
+        <section class="setting-block">
+          <div class="setting-head">
+            <span class="setting-label">每张大小上限</span>
+            <span class="value-badge" id="size-limit-badge">不限</span>
+          </div>
+          <div class="width-control">
+            <select id="size-limit-preset" class="width-preset" aria-label="每张切片大小上限">
+              <option value="0">不限制</option>
+              <option value="100">100 KB</option>
+              <option value="200">200 KB</option>
+              <option value="250">250 KB</option>
+              <option value="300">300 KB</option>
+              <option value="500">500 KB</option>
+              <option value="custom">自定义</option>
+            </select>
+            <div class="number-wrap">
+              <input id="size-limit-input" type="number" min="10" max="5000" step="1" value="200" inputmode="numeric" aria-label="自定义每张大小上限" disabled>
+              <span>KB</span>
+            </div>
+          </div>
+          <p class="setting-help" id="size-limit-hint">不限制单张大小；平台有要求时再开启。</p>
+        </section>
+
+        <section class="setting-block">
+          <div class="setting-head">
+            <span class="setting-label">文件命名</span>
+          </div>
+          <div class="naming-grid">
+            <label class="naming-field">
+              <span>前缀</span>
+              <input id="prefix-input" type="text" maxlength="30" placeholder="可留空" spellcheck="false">
+            </label>
+            <label class="naming-field">
+              <span>起始序号</span>
+              <input id="start-input" type="number" min="1" max="9999" step="1" value="1" inputmode="numeric">
+            </label>
+          </div>
+          <p class="setting-help" id="name-preview">示例：01.png</p>
+        </section>
+
+        <section class="summary-card" aria-label="切片摘要">
+          <div class="summary-row">
+            <span>原图尺寸</span>
+            <strong id="summary-source">—</strong>
+          </div>
+          <div class="summary-row">
+            <span>切片数量</span>
+            <strong id="summary-count">—</strong>
+          </div>
+          <div class="summary-row">
+            <span>单片尺寸</span>
+            <strong id="summary-slice">—</strong>
+          </div>
+          <div class="summary-row">
+            <span>输出总高度</span>
+            <strong id="summary-total">—</strong>
+          </div>
+          <div class="summary-row">
+            <span>单张上限</span>
+            <strong id="summary-limit">不限</strong>
+          </div>
+        </section>
+
+        <div class="warning" id="limit-warning" hidden>
+          <svg viewBox="0 0 18 18" fill="none" aria-hidden="true">
+            <path d="M9 2.6 16 15H2L9 2.6Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M9 7v4.1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            <circle cx="9" cy="13.2" r=".85" fill="currentColor"/>
+          </svg>
+          <span id="warning-text"></span>
+        </div>
+      </div>
+
+      <div class="export-footer">
+        <button type="button" class="export-btn" id="export-all" disabled>
+          <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M10 3v9M6.4 8.6 10 12.2l3.6-3.6M4 14.5v1.1c0 .8.7 1.4 1.5 1.4h9c.8 0 1.5-.6 1.5-1.4v-1.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span id="export-label">导出全部切片（ZIP）</span>
+        </button>
+        <p class="export-note">也可以点左侧每片的下载按钮单独导出</p>
+      </div>
+    </aside>
+  </main>
+
+  <input id="file-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/avif" hidden>
+
+  <div class="drop-overlay" id="drop-overlay" hidden>
+    <div class="drop-overlay-card">
+      <span class="drop-overlay-icon" aria-hidden="true">
+        <svg viewBox="0 0 64 64" fill="none">
+          <path d="M20 44h-3.5A8.5 8.5 0 0 1 16 27.2 13 13 0 0 1 41.4 26 9.5 9.5 0 0 1 47 44h-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M32 30v18M25.5 41.5 32 48l6.5-6.5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <h2>松开鼠标，载入长图</h2>
+      <p>一次放入一张长图</p>
+    </div>
+  </div>
+
+  <div class="export-overlay" id="export-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="export-title">
+    <div class="export-card">
+      <span class="export-spinner" aria-hidden="true"></span>
+      <h3 id="export-title">正在切图</h3>
+      <p id="export-status">准备切图…</p>
+      <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progress-fill"></div></div>
+      <p class="export-hint">切片较多时需要几秒，请保持页面打开。</p>
+    </div>
+  </div>
+
+  <div class="toast-stack" id="toast-stack" role="status" aria-live="polite"></div>
+
+  <noscript>
+    <div class="noscript">需要启用 JavaScript 才能切图。</div>
+  </noscript>
+
+  <script src="slice.js" defer></script>
+</body>
+</html>
