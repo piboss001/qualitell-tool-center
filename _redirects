@@ -1,0 +1,5 @@
+# Qualitell Tool Center
+/ /home.html 200
+/stitch /index.html 301
+/slice /slice.html 301
+/slice/ /slice.html 301
