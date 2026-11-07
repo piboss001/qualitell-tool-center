@@ -23,13 +23,15 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/vendor/ffmpeg"
           cp node_modules/@ffmpeg/ffmpeg/dist/umd/*.js "$GITHUB_WORKSPACE/vendor/ffmpeg/"
           cp node_modules/@ffmpeg/core/dist/umd/ffmpeg-core.js "$GITHUB_WORKSPACE/vendor/ffmpeg/"
-          cp node_modules/@ffmpeg/ffmpeg/LICENSE "$GITHUB_WORKSPACE/vendor/ffmpeg/FFMPEG-WRAPPER-LICENSE"
-          cp node_modules/@ffmpeg/core/LICENSE "$GITHUB_WORKSPACE/vendor/ffmpeg/FFMPEG-CORE-LICENSE"
+          for pkg in ffmpeg core; do
+            if [ -f "node_modules/@ffmpeg/$pkg/LICENSE" ]; then cp "node_modules/@ffmpeg/$pkg/LICENSE" "$GITHUB_WORKSPACE/vendor/ffmpeg/$pkg-LICENSE"; fi
+          done
           python3 - <<'PY'
           from pathlib import Path
           import json
           src=Path('/tmp/video-vendor/node_modules/@ffmpeg/core/dist/umd/ffmpeg-core.wasm')
-          dest=Path('vendor/ffmpeg')
+          import os
+          dest=Path(os.environ['GITHUB_WORKSPACE'])/'vendor/ffmpeg'
           data=src.read_bytes()
           part_size=12*1024*1024
           chunks=[]
@@ -40,6 +42,7 @@ jobs:
           (dest/'wasm-manifest.json').write_text(json.dumps({'size':len(data),'parts':chunks}))
           print('SPLIT:',len(data),chunks)
           PY
+          cd "$GITHUB_WORKSPACE"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add vendor/ffmpeg
