@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f6f8f5"><title>图片转 PDF · Qualitell Tool Center</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/image-to-pdf.css"><script src="/image-to-pdf.js" defer></script></head>
+<body><header><a class="brand" href="/">QUALITELL<span>.</span></a><nav><a href="/">工具中心</a><a href="/stitcher">长图拼接</a><a href="/slice">长图切片</a><a href="/image-batch">图片批处理</a><a class="active" href="/image-to-pdf">图片转 PDF</a></nav><span class="local">● 本地处理 · 无需上传</span></header>
+<main><div class="intro"><div class="eyebrow">QUALITELL · DOCUMENT TOOLS</div><h1>图片转 PDF</h1><p>JPG、PNG 等图片一键生成 PDF。支持多图合并、长图单页、自动分页与自定义纸张。文件只在浏览器中处理。</p></div>
+<div class="layout"><section class="panel workspace"><div class="heading"><div><h2>图片队列 <span id="count">0</span></h2><p>可拖入多张图片，并调整页面顺序</p></div><button class="link" id="clear" disabled>清空</button></div>
+<input id="files" type="file" accept="image/*" multiple hidden><div id="drop" class="drop" tabindex="0" role="button" aria-label="选择图片"><div class="drop-icon">⇧</div><strong>拖拽图片到此处</strong><p>支持 JPG、PNG、WebP 等浏览器可读取的图片</p><button class="primary" id="choose">选择图片</button><small>每张建议不超过 50 MB；GIF 仅取首帧</small></div>
+<div class="queue-label"><span>图片列表</span><span>↑ ↓ 调整顺序</span></div><div id="queue" class="queue"><div class="empty">尚未添加图片</div></div></section>
+<aside class="panel settings"><div class="heading"><div><h2>PDF 输出设置</h2><p>按用途选择转换方式</p></div><button id="reset" class="link">重置</button></div>
+<div class="section"><div class="section-head"><b>01</b> 转换模式</div><label class="field">处理方式<select id="mode"><option value="multi">多张图片 → 多页 PDF</option><option value="long">单张长图 → 单页 PDF</option><option value="split">长图 / 多图 → 自动分页 PDF</option><option value="contact">多张图片 → 同一页 PDF（拼版）</option></select></label><p class="hint" id="mode-hint">每张图片独占一页，可统一设置纸张大小。</p></div>
+<div class="section"><div class="section-head"><b>02</b> 纸张与排版</div><label class="field">页面尺寸<select id="paper"><option value="a4">A4 · 210 × 297 mm</option><option value="a3">A3 · 297 × 420 mm</option><option value="letter">Letter · 216 × 279 mm</option><option value="original">按图片比例自动生成</option><option value="custom">自定义（mm）</option></select></label>
+<div class="two" id="custom-size" hidden><label class="field">宽度（mm）<input id="paper-width" type="number" min="10" max="5000" value="210"></label><label class="field">高度（mm）<input id="paper-height" type="number" min="10" max="5000" value="297"></label></div>
+<label class="field">页面方向<select id="orientation"><option value="auto">自动适配</option><option value="portrait">纵向</option><option value="landscape">横向</option></select></label>
+<label class="field">图片适配<select id="fit"><option value="contain">完整显示 · 不裁切</option><option value="cover">铺满页面 · 可裁切</option></select></label>
+<label class="field">页边距（mm）<input id="margin" type="number" min="0" max="100" value="8"></label>
+<label class="field" id="columns-wrap" hidden>拼版列数<select id="columns"><option value="1">1 列</option><option value="2" selected>2 列</option><option value="3">3 列</option><option value="4">4 列</option></select></label></div>
+<div class="section"><div class="section-head"><b>03</b> 导出质量</div><div class="range-head"><label for="quality">图片质量</label><strong id="quality-label">90%</strong></div><input type="range" id="quality" min="45" max="100" value="90"><p class="hint">JPEG 编码以控制 PDF 大小；质量越高，文件通常越大。</p>
+<label class="field">PDF 文件名<input id="filename" value="Qualitell-图片转PDF" maxlength="80"></label>
+<label class="check"><input id="page-numbers" type="checkbox">添加页码（页脚）</label></div>
+<div class="notice">♧ 图片在当前浏览器处理，不上传服务器。长图单页会受 PDF 页面尺寸上限约束；超长图片建议使用自动分页。</div>
+<button class="primary generate" id="generate" disabled>生成 PDF</button></aside></div>
+<section class="panel output" id="output" hidden><div class="output-top"><div><h2 id="output-title">转换完成</h2><p id="output-summary"></p></div><a id="download" class="primary download" download="images.pdf">下载 PDF</a></div><div class="progress"><div id="bar"></div></div><p id="status" role="status"></p></section>
+<footer><a href="/">← 返回工具中心</a><span>QUALITELL · DOCUMENT WORKSPACE</span></footer></main><div id="toast" class="toast" role="status"></div></body></html>
