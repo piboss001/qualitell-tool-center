@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f6f8f5">
+<meta name="description" content="Qualitell 视频压缩工具，按目标 MB 智能计算码率，或自定义尺寸、视频码率与帧率。浏览器本地处理。">
+<title>视频压缩 · Qualitell Tool Center</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/video-compress.css">
+<script src="/video-compress.js" defer></script>
+</head>
+<body>
+<header class="app-header">
+<div class="topbar">
+<a class="brand" href="/">QUALITELL<span>.</span></a>
+<nav aria-label="工具导航"><a href="/">工具中心</a><a href="/stitcher">长图拼接</a><a href="/slice">长图切片</a><a href="/image-batch">图片批处理</a><a href="/pdf-tool">PDF 工具</a><a class="current" href="/video-compress" aria-current="page">视频压缩</a></nav>
+<span class="privacy"><span class="dot"></span>本地处理 · 不上传视频</span>
+</div>
+</header>
+<main class="container">
+<section class="hero">
+<div class="eyebrow">QUALITELL · VIDEO WORKSPACE</div>
+<h1>视频压缩工具</h1>
+<p>针对几百 MB 的视频快速设定目标文件大小，保持分辨率、智能计算码率；或手动调整尺寸、码率和帧率。</p>
+</section>
+<div class="main-grid">
+<section class="panel upload-panel" aria-labelledby="upload-title">
+<div class="panel-head"><div><h2 id="upload-title">01 · 添加视频</h2><p>支持浏览器可解码的 MP4 / WebM 等视频文件</p></div><button class="quiet" id="clear-video" type="button" disabled>移除视频</button></div>
+<input id="video-file" type="file" accept="video/*,.mp4,.mov,.webm,.m4v,.mkv" hidden>
+<div class="upload-zone" id="dropzone" role="button" tabindex="0" aria-label="选择或拖入视频">
+<div class="upload-icon" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none"><rect x="5.5" y="10" width="37" height="28" rx="6" stroke="currentColor" stroke-width="2"/><path d="M20 18l11 6-11 6V18z" fill="currentColor"/></svg></div>
+<strong>拖入视频文件</strong>
+<span>或点击按钮选择本地视频</span>
+<button id="choose-file" class="primary small" type="button">选择视频</button>
+<small>支持数百 MB 的视频，文件只在你的浏览器中读取</small>
+</div>
+<div class="source-card" id="source-card" hidden>
+<div class="preview"><video id="source-preview" controls playsinline preload="metadata" aria-label="原视频预览"></video></div>
+<div class="source-head"><strong class="ellipsis" id="source-name" title="">—</strong><span class="source-size" id="source-size">—</span></div>
+<div class="source-metrics"><div><small>原始分辨率</small><b id="source-res">—</b></div><div><small>视频时长</small><b id="source-duration">—</b></div><div><small>平均总码率（估算）</small><b id="source-bitrate">—</b></div></div>
+</div>
+<div class="workflow-box"><div class="workflow-icon">i</div><p>视频编码在浏览器本地进行，<b>通常需要接近原视频时长</b>。压缩期间请保持页面处于前台，不要休眠或关闭标签页。</p></div>
+</section>
+<aside class="panel settings-panel" aria-labelledby="settings-title">
+<div class="panel-head"><div><h2 id="settings-title">02 · 压缩设置</h2><p>按目标大小或自行控制视频参数</p></div><button type="button" class="quiet" id="reset">重置</button></div>
+<div class="segmented" role="tablist" aria-label="压缩方式"><button id="mode-auto" role="tab" aria-selected="true" aria-controls="auto-settings">智能压缩</button><button id="mode-custom" role="tab" aria-selected="false" aria-controls="custom-settings">自定义参数</button></div>
+<div class="mode-content" id="auto-settings" role="tabpanel" aria-labelledby="mode-auto">
+<label class="field" for="target-size">目标文件大小 <span class="hint-inline">MB</span><div class="target-entry"><input id="target-size" type="number" min="1" max="2000" step="1" value="25"><span>MB</span></div></label>
+<div class="size-presets"><button type="button" data-target="10">10 MB</button><button type="button" data-target="25" class="selected">25 MB</button><button type="button" data-target="50">50 MB</button><button type="button" data-target="100">100 MB</button></div>
+<div class="info-card">
+<div class="info-row"><span>输出分辨率</span><b id="auto-res">与原视频相同</b></div>
+<div class="info-row"><span>自动计算视频码率</span><b id="auto-bitrate">导入后计算</b></div>
+<div class="info-row"><span>预估输出体积</span><b id="auto-estimate">—</b></div>
+</div>
+<p class="help">保持原视频画面宽高，通过计算目标码率压缩；如第一次结果超过目标，自动降低码率重试，最多 2 次重试。</p>
+</div>
+<div class="mode-content" id="custom-settings" role="tabpanel" aria-labelledby="mode-custom" hidden>
+<label class="field" for="resolution">输出分辨率<select id="resolution"><option value="original">保持原始尺寸</option><option value="2160">4K（最长边最多 3840px）</option><option value="1080">1080p（最长边最多 1920px）</option><option value="720">720p（最长边最多 1280px）</option><option value="480">480p（最长边最多 854px）</option><option value="360">360p（最长边最多 640px）</option><option value="custom">自定义宽高</option></select></label>
+<div class="two" id="custom-dims" hidden><label class="field" for="custom-width">宽度（px）<input type="number" id="custom-width" min="64" max="4096" step="2" value="1920"></label><label class="field" for="custom-height">高度（px）<input type="number" id="custom-height" min="64" max="4096" step="2" value="1080"></label></div>
+<label class="checkbox"><input type="checkbox" id="lock-ratio" checked> 自定义宽高时保持原始比例</label>
+<div class="two"><label class="field" for="manual-bitrate">视频码率（Mbps）<input id="manual-bitrate" type="number" min=".15" max="50" step=".1" value="3.0"></label><label class="field" for="fps">输出帧率<select id="fps"><option value="60">跟随原视频（最高 60fps）</option><option value="30">最高 30 fps</option><option value="24">最高 24 fps</option><option value="15">最高 15 fps</option></select></label></div>
+<div class="info-card"><div class="info-row"><span>预计视频大小</span><b id="custom-estimate">导入后计算</b></div><div class="info-row"><span>输出分辨率</span><b id="custom-res">—</b></div></div>
+<p class="help">调整尺寸会进行重新缩放；选择「保持原始尺寸」时不会主动裁切画面。</p>
+</div>
+<div class="rule"></div>
+<div class="two"><label class="field" for="audio-rate">声音保留 / 码率<select id="audio-rate"><option value="128">保留声音 · 128 kbps</option><option value="96" selected>保留声音 · 96 kbps</option><option value="64">保留声音 · 64 kbps</option><option value="0">静音 · 不保留音频</option></select></label><label class="field" for="output-type">输出格式<select id="output-type"><option value="mp4">MP4 优先</option><option value="webm">WebM 优先</option></select></label></div>
+<div class="type-hint" id="type-hint">将根据当前浏览器支持的编码格式自动选择实际输出格式。</div>
+<div class="buttons"><button class="primary start-button" id="start" type="button" disabled><span>开始视频压缩</span><span aria-hidden="true">↗</span></button><button class="secondary" id="cancel" type="button" hidden>取消当前压缩</button></div>
+<p class="help">媒体编码器实际码率可能与设定值存在偏差，因此最终体积无法保证精确命中。若原视频已高度压缩，重新编码也可能变大或画质下降。</p>
+</aside>
+</div>
+<section class="panel progress-panel" id="progress" hidden>
+<div class="progress-header"><div><h2 id="progress-title">压缩进行中</h2><p id="progress-stage">准备编码器…</p></div><strong id="progress-percent">0%</strong></div>
+<div class="progress-bar"><div id="progress-fill"></div></div><div class="progress-detail"><span id="progress-time">00:00 / 00:00</span><span id="attempt-label"></span></div>
+</section>
+<section class="panel results-panel" id="results" hidden>
+<div class="result-header"><div><div class="eyebrow">PROCESS COMPLETE</div><h2>压缩完成</h2></div><span id="result-reduction" class="result-badge">—</span></div>
+<div class="results-grid"><div><small>原始大小</small><strong id="result-original">—</strong></div><div><small>压缩后大小</small><strong id="result-compressed">—</strong></div><div><small>输出规格</small><strong id="result-spec">—</strong></div></div>
+<p class="result-note" id="result-note"></p><video id="result-preview" controls playsinline preload="metadata" hidden></video><a id="download" class="primary download" download href="#">下载压缩视频</a>
+</section>
+<footer><a href="/">← 返回工具中心</a><span>© 2026 QUALITELL · VIDEO TOOLS</span></footer>
+</main>
+</body>
+</html>
