@@ -34,10 +34,11 @@
 <button id="choose-file" class="primary small" type="button">选择视频</button>
 <small>支持数百 MB 的视频，文件只在你的浏览器中读取</small>
 </div>
+<div class="codec-diagnostic" id="codec-diagnostic" role="status" aria-live="polite" hidden><strong id="diagnostic-title">视频兼容性检测</strong><p id="diagnostic-message"></p><small id="diagnostic-details"></small></div>
 <div class="source-card" id="source-card" hidden>
 <div class="preview"><video id="source-preview" controls playsinline preload="metadata" aria-label="原视频预览"></video></div>
 <div class="source-head"><strong class="ellipsis" id="source-name" title="">—</strong><span class="source-size" id="source-size">—</span></div>
-<div class="source-metrics"><div><small>原始分辨率</small><b id="source-res">—</b></div><div><small>视频时长</small><b id="source-duration">—</b></div><div><small>平均总码率（估算）</small><b id="source-bitrate">—</b></div></div>
+<div class="source-metrics"><div><small>原始分辨率</small><b id="source-res">—</b></div><div><small>视频时长</small><b id="source-duration">—</b></div><div><small>平均总码率（估算）</small><b id="source-bitrate">—</b></div></div><p class="codec-hint" id="source-codec" hidden></p>
 </div>
 <div class="workflow-box"><div class="workflow-icon">i</div><p>视频编码在浏览器本地进行，<b>通常需要接近原视频时长</b>。压缩期间请保持页面处于前台，不要休眠或关闭标签页。</p></div>
 </section>

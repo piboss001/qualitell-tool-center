@@ -169,55 +169,145 @@
     state.url = "";
     state.width = state.height = state.duration = 0;
     $("source-card").hidden = true;
+    $("source-codec").hidden = true;
     closeResult();
     $("progress").hidden = true;
     updateEstimates();
     setBusy(false);
   }
 
+  async function inspectFileCodec(file) {
+    // MP4 is a container. For a practical, privacy-preserving hint, inspect
+    // only the head and tail, where the ISO-BMFF movie metadata usually lives.
+    const inspectSize = Math.min(8 * 1024 * 1024, file.size);
+    const buffers = [file.slice(0, inspectSize).arrayBuffer()];
+    if (file.size > inspectSize) {
+      buffers.push(file.slice(Math.max(inspectSize, file.size - inspectSize)).arrayBuffer());
+    }
+    let text = "";
+    try {
+      const chunks = await Promise.all(buffers);
+      text = chunks.map((chunk) => new TextDecoder("latin1").decode(chunk)).join("");
+    } catch {
+      return { name: "未知", category: "unknown", label: "无法读取编码标识" };
+    }
+    const markers = [
+      { regex: /hvc1|hev1|dvh1|dvhe/i, name: "H.265 / HEVC", category: "hevc" },
+      { regex: /av01/i, name: "AV1", category: "av1" },
+      { regex: /avc1|avc3/i, name: "H.264 / AVC", category: "h264" },
+      { regex: /vp09/i, name: "VP9", category: "vp9" },
+      { regex: /mp4v/i, name: "MPEG-4 Visual", category: "mpeg4" }
+    ];
+    const marker = markers.find((item) => item.regex.test(text));
+    return marker
+      ? { name: marker.name, category: marker.category, label: "检测到编码标识：" + marker.name }
+      : { name: "未知", category: "unknown", label: "未能在文件开头或结尾找到可识别的视频编码标识" };
+  }
+
+  function showDiagnostic(title, message, details) {
+    $("diagnostic-title").textContent = title;
+    $("diagnostic-message").textContent = message;
+    $("diagnostic-details").textContent = details;
+    $("codec-diagnostic").hidden = false;
+  }
+
+  function hideDiagnostic() {
+    $("codec-diagnostic").hidden = true;
+  }
+
+  function diagnoseProblem(file, codec, error) {
+    const reason = error && error.message ? error.message : "读取失败";
+    let advice;
+    if (codec.category === "hevc") {
+      advice = "这个 MP4 可能使用 H.265/HEVC。部分 Windows 电脑或浏览器无法直接解码。建议先将视频转为 H.264 视频编码 + AAC 音频编码的 MP4，再导入本工具。";
+    } else if (codec.category === "av1") {
+      advice = "检测到 AV1 视频编码，可能不被当前浏览器或设备支持。请尝试更新 Chrome/Edge，或转换为 H.264/AAC MP4。";
+    } else if (codec.category === "h264") {
+      advice = "检测到 H.264 标识，但仍未正常读取。可能与音轨编码、MP4 文件索引、视频损坏或浏览器解码能力有关。请使用 VLC 的「工具 → 编解码器信息」查看视频和音频编码。";
+    } else {
+      advice = "MP4 只是封装格式。请使用 VLC 的「工具 → 编解码器信息」确认视频为 H.264、音频为 AAC；也可尝试用视频编辑软件重新导出为 H.264/AAC MP4。";
+    }
+    showDiagnostic(
+      "此视频暂时无法在当前浏览器中读取",
+      advice,
+      "文件：" + file.name + "（" + fmtMB(file.size) + "）｜" +
+      codec.label + "｜浏览器提示：" + reason +
+      "。本工具不上传文件，只有浏览器能解码的视频才能直接压缩。"
+    );
+  }
+
   function loadVideoInfo(url) {
     return new Promise((resolve, reject) => {
       const video = document.createElement("video");
-      video.preload = "metadata";
+      video.preload = "auto";
       video.playsInline = true;
-      const fail = () => {
-        clearTimeout(timeout);
+      video.muted = true;
+      let settled = false;
+      let timeout = null;
+      const cleanup = () => {
+        window.clearTimeout(timeout);
         video.removeAttribute("src");
         video.load();
-        reject(new Error("当前浏览器无法解码该视频，请尝试 MP4(H.264/AAC) 或 WebM"));
       };
-      const timeout = window.setTimeout(fail, 20000);
-      video.onloadedmetadata = () => {
-        clearTimeout(timeout);
-        const result = { width: video.videoWidth, height: video.videoHeight, duration: video.duration };
-        video.removeAttribute("src");
-        video.load();
-        if (!result.width || !result.height || !Number.isFinite(result.duration) || result.duration <= 0) {
-          reject(new Error("无法读取视频时长或尺寸，暂不支持直播流和无效视频"));
-        } else resolve(result);
+      const fail = (message) => {
+        if (settled) return;
+        settled = true;
+        const raw = video.error ? video.error.code : null;
+        cleanup();
+        const labels = {
+          1: "加载被中止",
+          2: "文件读取出错",
+          3: "视频解码失败",
+          4: "不支持该视频编码或封装"
+        };
+        reject(new Error(message || (labels[raw] || ("媒体读取失败（代码 " + (raw || "未知") + "）"))));
       };
-      video.onerror = fail;
+      const accept = () => {
+        if (settled) return;
+        const info = {
+          width: video.videoWidth, height: video.videoHeight, duration: video.duration
+        };
+        if (!info.width || !info.height || !Number.isFinite(info.duration) || info.duration <= 0) {
+          fail("已读到部分视频信息，但未获得有效时长/分辨率");
+          return;
+        }
+        settled = true;
+        cleanup();
+        resolve(info);
+      };
+      video.addEventListener("loadedmetadata", accept, { once: true });
+      video.addEventListener("error", () => fail(), { once: true });
+      timeout = window.setTimeout(() =>
+        fail("读取视频元数据超时（超过 60 秒），可能与超大文件、视频索引或浏览器兼容性有关"), 60000);
       video.src = url;
+      video.load();
     });
   }
 
   async function chooseVideo(file) {
     if (state.busy || !file) return;
+    hideDiagnostic();
     if (!file.type.startsWith("video/") && !/\.(mp4|mov|m4v|webm|mkv|ogv)$/i.test(file.name)) {
-      window.alert("请选择视频文件"); return;
+      showDiagnostic("无法识别文件", "请选择 MP4、WebM 等视频文件。", "文件：" + file.name);
+      return;
     }
     if (file.size > 2 * 1024 * 1024 * 1024) {
-      window.alert("当前建议单个视频不超过 2 GB，以免浏览器内存不足"); return;
+      showDiagnostic("文件较大", "当前建议单个视频不超过 2 GB，以免浏览器内存不足。", "文件：" + file.name);
+      return;
     }
     const url = URL.createObjectURL(file);
-    let meta;
-    try { meta = await loadVideoInfo(url); }
-    catch (error) {
+    let meta, codec;
+    try {
+      // The probe does not upload the video or depend on network APIs.
+      codec = await inspectFileCodec(file);
+      meta = await loadVideoInfo(url);
+    } catch (error) {
       URL.revokeObjectURL(url);
-      window.alert(error.message);
+      diagnoseProblem(file, codec || { category: "unknown", label: "编码标识尚未读取" }, error);
       return;
     }
     cleanupInput();
+    hideDiagnostic();
     state.file = file;
     state.url = url;
     state.width = meta.width;
@@ -230,6 +320,8 @@
     $("source-res").textContent = meta.width + " × " + meta.height;
     $("source-duration").textContent = fmtTime(meta.duration);
     $("source-bitrate").textContent = fmtRate(file.size * 8 / meta.duration);
+    $("source-codec").textContent = codec.label + "（依据文件中的编码标识初步判断）";
+    $("source-codec").hidden = codec.category === "unknown";
     $("source-card").hidden = false;
     $("custom-width").value = String(meta.width);
     $("custom-height").value = String(meta.height);
@@ -561,7 +653,7 @@
       });
     }
     $("dropzone").addEventListener("drop", (event) => chooseVideo(event.dataTransfer.files?.[0]));
-    $("clear-video").addEventListener("click", cleanupInput);
+    $("clear-video").addEventListener("click", () => { cleanupInput(); hideDiagnostic(); });
     $("mode-auto").addEventListener("click", () => setMode("auto"));
     $("mode-custom").addEventListener("click", () => setMode("custom"));
     $("resolution").addEventListener("change", syncResolution);
