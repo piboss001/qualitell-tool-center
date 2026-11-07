@@ -18,9 +18,13 @@ jobs:
         run: |
           set -euo pipefail
           node --check video-compress.js
+          command -v google-chrome
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq ffmpeg
+          fi
           command -v ffmpeg
           command -v ffprobe
-          command -v google-chrome
           mkdir -p /tmp/video-smoke
           cd /tmp/video-smoke
           npm init -y >/dev/null
