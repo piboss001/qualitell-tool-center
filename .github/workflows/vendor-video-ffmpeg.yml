@@ -1,0 +1,47 @@
+name: Vendor browser FFmpeg fallback (one-time)
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/vendor-video-ffmpeg.yml"]
+permissions:
+  contents: write
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vendor pinned FFmpeg.wasm and split large WASM for Cloudflare Pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/video-vendor
+          cd /tmp/video-vendor
+          npm init -y >/dev/null
+          npm install --silent @ffmpeg/ffmpeg@0.12.15 @ffmpeg/core@0.12.10
+          find node_modules/@ffmpeg/ffmpeg/dist -maxdepth 2 -type f -printf "%p %s bytes\n"
+          find node_modules/@ffmpeg/core/dist -maxdepth 2 -type f -printf "%p %s bytes\n"
+          mkdir -p "$GITHUB_WORKSPACE/vendor/ffmpeg"
+          cp node_modules/@ffmpeg/ffmpeg/dist/umd/*.js "$GITHUB_WORKSPACE/vendor/ffmpeg/"
+          cp node_modules/@ffmpeg/core/dist/umd/ffmpeg-core.js "$GITHUB_WORKSPACE/vendor/ffmpeg/"
+          cp node_modules/@ffmpeg/ffmpeg/LICENSE "$GITHUB_WORKSPACE/vendor/ffmpeg/FFMPEG-WRAPPER-LICENSE"
+          cp node_modules/@ffmpeg/core/LICENSE "$GITHUB_WORKSPACE/vendor/ffmpeg/FFMPEG-CORE-LICENSE"
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          src=Path('/tmp/video-vendor/node_modules/@ffmpeg/core/dist/umd/ffmpeg-core.wasm')
+          dest=Path('vendor/ffmpeg')
+          data=src.read_bytes()
+          part_size=12*1024*1024
+          chunks=[]
+          for i in range(0,len(data),part_size):
+              name=f'core-{i//part_size:02}.bin'
+              (dest/name).write_bytes(data[i:i+part_size])
+              chunks.append(name)
+          (dest/'wasm-manifest.json').write_text(json.dumps({'size':len(data),'parts':chunks}))
+          print('SPLIT:',len(data),chunks)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add vendor/ffmpeg
+          git commit -m "Vendor FFmpeg wasm for browser unsupported codecs (chunked assets)"
+          git push
