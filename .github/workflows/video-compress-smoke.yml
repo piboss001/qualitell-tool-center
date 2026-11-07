@@ -34,6 +34,7 @@ jobs:
             -f lavfi -i "sine=frequency=440:sample_rate=44100:duration=3" \
             -c:v libx264 -pix_fmt yuv420p -preset ultrafast -b:v 900k \
             -c:a aac -b:a 96k -shortest /tmp/video-smoke/source.mp4
+          cd "$GITHUB_WORKSPACE"
           python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/video-http.log 2>&1 &
       - name: Test auto size mode and manual mode in Chrome
         shell: bash
