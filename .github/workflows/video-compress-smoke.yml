@@ -3,7 +3,7 @@ name: One-time video compressor smoke test
 on:
   push:
     branches: [main]
-    paths: [".github/workflows/video-compress-smoke.yml"]
+    paths: [".github/workflows/video-compress-smoke.yml", "video-compress.js"]
 
 permissions:
   contents: read
