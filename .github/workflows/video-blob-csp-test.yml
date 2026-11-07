@@ -1,0 +1,61 @@
+name: One-time Cloudflare video CSP regression test
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/video-blob-csp-test.yml"]
+permissions:
+  contents: read
+jobs:
+  video:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify browser local video playback under deployed CSP
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq ffmpeg
+          fi
+          mkdir -p /tmp/csp-video
+          cd /tmp/csp-video
+          npm init -y >/dev/null
+          npm install --silent playwright-core@1.56.1
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i "testsrc2=size=320x180:rate=24:duration=2" \
+             -c:v libx264 -preset ultrafast -pix_fmt yuv420p -movflags +faststart test.mp4
+          cd "$GITHUB_WORKSPACE"
+          cat >/tmp/csp-video/csp-server.py <<'PY'
+          from http.server import HTTPServer, SimpleHTTPRequestHandler
+          from pathlib import Path
+          import os
+          policy = next(line.strip().split(": ",1)[1] for line in Path('_headers').read_text().splitlines() if line.strip().startswith("Content-Security-Policy:"))
+          class H(SimpleHTTPRequestHandler):
+              def end_headers(self):
+                  self.send_header('Content-Security-Policy', policy)
+                  super().end_headers()
+          HTTPServer(('127.0.0.1',8765),H).serve_forever()
+          PY
+          python3 /tmp/csp-video/csp-server.py >/tmp/csp-video/server.log 2>&1 &
+          node <<'JS'
+          const fs=require("fs");
+          const {chromium}=require("/tmp/csp-video/node_modules/playwright-core");
+          (async()=>{
+            const browser=await chromium.launch({executablePath:"/usr/bin/google-chrome",headless:true,args:["--no-sandbox","--autoplay-policy=no-user-gesture-required"]});
+            const page=await browser.newPage();
+            const errors=[];
+            page.on("pageerror",e=>errors.push(e.message));
+            page.on("console",msg=>{if(msg.type()==="error")console.log("BROWSER ERR:",msg.text());});
+            await page.goto("http://127.0.0.1:8765/video-compress.html",{waitUntil:"networkidle"});
+            await page.setInputFiles("#video-file",{
+              name:"good-h264.mp4",mimeType:"video/mp4",buffer:fs.readFileSync("/tmp/csp-video/test.mp4")
+            });
+            await page.locator("#source-card:visible").waitFor({timeout:16000});
+            const dim=await page.locator("#source-res").innerText();
+            const duration=await page.locator("#source-duration").innerText();
+            console.log("PASSED: H.264 MP4 decoded with actual CSP, dimensions:",dim,"duration:",duration);
+            if(dim!=="320 × 180")throw Error("Wrong dimensions");
+            if(errors.length)throw Error("JS errors: "+errors.join("; "));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
