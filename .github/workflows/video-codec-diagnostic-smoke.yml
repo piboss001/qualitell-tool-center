@@ -1,0 +1,72 @@
+name: One-time MP4 compatibility diagnostic smoke test
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/video-codec-diagnostic-smoke.yml"]
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install tools and create codec samples
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check video-compress.js
+          command -v google-chrome
+          if ! command -v ffmpeg >/dev/null; then
+            sudo apt-get update -qq
+            sudo apt-get install -qq -y ffmpeg
+          fi
+          mkdir -p /tmp/codec-test
+          cd /tmp/codec-test
+          npm init -y >/dev/null
+          npm install --silent playwright-core@1.56.1
+          ffmpeg -hide_banner -loglevel error -y \
+             -f lavfi -i "testsrc2=size=320x180:rate=24:duration=2" \
+             -c:v libx264 -pix_fmt yuv420p -preset ultrafast -movflags +faststart \
+             /tmp/codec-test/h264.mp4
+          if ffmpeg -hide_banner -loglevel error -y \
+             -f lavfi -i "testsrc2=size=320x180:rate=24:duration=2" \
+             -c:v libx265 -x265-params "log-level=error:pools=1" -tag:v hvc1 \
+             /tmp/codec-test/hevc.mp4; then echo "hevc sample ready"; fi
+      - name: Check video metadata compatibility warnings in Chrome
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/codec-http.log 2>&1 &
+          node <<'JS'
+          const fs=require("fs");
+          const {chromium}=require("/tmp/codec-test/node_modules/playwright-core");
+          (async()=>{
+            const browser=await chromium.launch({executablePath:"/usr/bin/google-chrome",headless:true,args:["--no-sandbox","--autoplay-policy=no-user-gesture-required"]});
+            const page=await browser.newPage();
+            const errors=[];
+            page.on("pageerror",err=>errors.push(err.message));
+            await page.goto("http://127.0.0.1:8765/video-compress.html",{waitUntil:"networkidle"});
+            await page.setInputFiles("#video-file",{name:"h264.mp4",mimeType:"video/mp4",buffer:fs.readFileSync("/tmp/codec-test/h264.mp4")});
+            await page.locator("#source-card:visible").waitFor({timeout:15000});
+            console.log("H264 recognized:",await page.locator("#source-codec").textContent());
+            await page.locator("#clear-video").click();
+            const damaged=Buffer.concat([
+              Buffer.from("000000186674797069736f6d0000020069736f6d61766331","hex"),
+              Buffer.from("invalid mp4 metadata")
+            ]);
+            await page.setInputFiles("#video-file",{name:"broken.mp4",mimeType:"video/mp4",buffer:damaged});
+            await page.locator("#codec-diagnostic:visible").waitFor({timeout:15000});
+            console.log("Corrupt MP4 warning:",await page.locator("#diagnostic-message").textContent());
+            if(fs.existsSync("/tmp/codec-test/hevc.mp4")){
+              await page.setInputFiles("#video-file",{name:"hevc.mp4",mimeType:"video/mp4",buffer:fs.readFileSync("/tmp/codec-test/hevc.mp4")});
+              await page.waitForFunction(()=>!document.querySelector("#codec-diagnostic").hidden||!document.querySelector("#source-card").hidden,{timeout:15000});
+              await page.waitForTimeout(750);
+              const diag=!(await page.locator("#codec-diagnostic").isHidden());
+              const source=!(await page.locator("#source-card").isHidden());
+              if(diag)console.log("HEVC diagnostic:",await page.locator("#diagnostic-message").textContent());
+              if(source)console.log("HEVC recognized and browser supports playback metadata");
+            }
+            if(errors.length)throw Error("JS errors "+errors.join(";"));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
